@@ -1,0 +1,91 @@
+https://www.tinkercad.com/things/jC8IUyZmsEk-bloqueo-con-servomotor?sharecode=mj9bX-LgGd8ZcdmwDboK7Pclo6BJ2Vx-opuEXJr1lY0
+
+//Para probar se debe utilizar la contraseña 1234
+//Solo usar las teclas del 1 al 9
+//Al funcionar debe girar solo unos segundos para simular la apertura del pestillo para luego volverse a cerrar despues de un tiempo
+//Usar potenciometro para presentar pantalla LED
+#include <Keypad.h>
+#include <Servo.h>
+#include <LiquidCrystal.h>
+
+const byte ROWS = 3; // Número de filas en el teclado
+const byte COLS = 3; // Número de columnas en el teclado
+char keys[ROWS][COLS] = {
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'}
+};
+byte rowPins[ROWS] = {5, 4, 3}; // Pines conectados a las filas del teclado
+byte colPins[COLS] = {2, 1, 0}; // Pines conectados a las columnas del teclado
+
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+Servo servo;
+
+// Pines del LCD: RS, Enable, D4, D5, D6, D7
+LiquidCrystal lcd(6, 7, 11, 10, 9, 8);
+
+String password = "1234"; // Contraseña establecida
+String inputPassword; // Contraseña que se ingresa en el teclado
+int attempts = 0; //Variable de intentos
+bool locked = false; // Estado que indica el no poder accionar
+unsigned long lockTime;
+
+void setup() {
+  servo.attach(13); // Pin conectado al servo
+  lcd.begin(16, 2);
+  lcd.print("Contrasena:");
+  
+}
+
+void loop() {
+  if (locked) {
+    if (millis() - lockTime > 300000) { // 5 minutos de bloqueo
+      locked = false;
+      attempts = 0;
+      lcd.clear();
+      lcd.print("Contrasena");
+      
+    }
+  } else {
+    char key = keypad.getKey();
+    if (key) {
+      lcd.setCursor(inputPassword.length(), 1);
+      lcd.print('#');
+      inputPassword += key;
+      if (inputPassword.length() == 4) {
+        if (inputPassword == password) {
+          servo.write(90); // Gira el servo 45 grados
+          delay(5000); // Mantén el servo en esta posición por 5 segundos
+          servo.write(0); // Regresa el servo a la posición inicial
+          lcd.clear();
+          lcd.print("Acceso");
+          lcd.setCursor(0, 1);
+          lcd.print("Permitido");
+          delay(2000);
+          lcd.clear();
+          lcd.print("Contrasena");
+
+        } else {
+          attempts++; // Se incrementa la variable de intentos en 1
+          if (attempts >= 3) { // Verificacion de intentos
+            locked = true;
+            lockTime = millis();
+            lcd.clear();
+            lcd.print("Sistema");
+            lcd.setCursor(0, 1);
+            lcd.print("Bloqueado");
+          } else {
+            lcd.clear();
+            lcd.print("Contrasena");
+            lcd.setCursor(0, 1);
+            lcd.print("Incorrecta");
+            delay(2000);
+            lcd.clear();
+            lcd.print("Contrasena");
+          }
+        }
+        inputPassword = ""; //
+      }
+    }
+  }
+}
